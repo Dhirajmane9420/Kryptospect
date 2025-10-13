@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Demo - Kryptospect</title>
+    <style>
+        /* --- Global Styles & Resets --- */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #00aaff;
+            --background-color: #0d1117;
+            --background-light: #161b22;
+            --text-color: #c9d1d9;
+            --header-bg: rgba(13, 17, 23, 0.8);
+            --border-color: #30363d;
+            --success-color: #238636;
+            --danger-color: #da3633;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        /* --- Animated Background --- */
+        .animated-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1;
+            background: linear-gradient(240deg, #1a0c2e, #0d1117, #112d40);
+            background-size: 400% 400%; animation: gradientAnimation 15s ease infinite;
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+        }
+
+        /* --- Header --- */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; padding: 1rem 5%;
+            display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            background-color: var(--header-bg); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .logo { font-family: 'Space Mono', monospace; font-size: 1.5rem; color: #fff; font-weight: 700; text-decoration: none; }
+        .logo span { color: var(--primary-color); }
+        nav a { font-size: 1rem; color: var(--text-color); text-decoration: none; margin-left: 2rem; position: relative; transition: color 0.3s ease; }
+        nav a:hover { color: var(--primary-color); }
+
+        /* --- Demo Page Layout --- */
+        main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 8rem 2rem 2rem 2rem;
+        }
+
+        .card-container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: max-width 0.5s ease;
+        }
+        
+        /* --- Upload State --- */
+        .upload-container h1, .analysis-container h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-container p { margin-bottom: 2rem; }
+        .drag-area {
+            border: 2px dashed var(--border-color); border-radius: 8px;
+            padding: 3rem 1rem; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            cursor: pointer; transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+        .drag-area.active { border-color: var(--primary-color); background-color: rgba(0, 170, 255, 0.1); }
+        .drag-area .icon { font-size: 3rem; color: var(--primary-color); }
+        .drag-area h2 { font-size: 1.2rem; color: #fff; margin: 1rem 0 0.5rem 0; }
+        .drag-area span { font-size: 0.9rem; }
+        .separator { margin: 1.5rem 0; color: var(--text-color); }
+        .file-upload-btn {
+            width: 100%; padding: 0.8rem 2rem; background-color: var(--primary-color);
+            color: #fff; border: none; border-radius: 5px; font-size: 1rem;
+            font-weight: 700; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .file-upload-btn:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0, 170, 255, 0.3); }
+        .examples-container { margin-top: 2rem; }
+        .examples-container h3 { font-size: 1rem; color: #fff; margin-bottom: 1rem; }
+        .example-btn {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-color); padding: 0.5rem 1rem; margin: 0.25rem;
+            border-radius: 5px; cursor: pointer; transition: background-color 0.3s, border-color 0.3s;
+        }
+        .example-btn:hover { background-color: var(--background-light); border-color: var(--primary-color); }
+        
+        /* --- Analysis State --- */
+        #analysis-filename {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 2rem;
+            word-break: break-all;
+        }
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            margin: 0 auto 2rem auto;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-updates { list-style: none; text-align: left; padding-left: 0; }
+        .status-updates li { margin-bottom: 1rem; font-size: 1rem; transition: color 0.3s ease; }
+        .status-updates li span { display: inline-block; width: 25px; font-family: 'Space Mono', monospace; }
+        .status-updates li.pending { color: #666; }
+        .status-updates li.in-progress { color: #fff; font-weight: 700; }
+        .status-updates li.complete { color: var(--text-color); opacity: 0.7; }
+
+        /* --- Results State --- */
+        #results-container {
+            max-width: 1000px;
+            text-align: left;
+        }
+        .results-header {
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .results-header h1 { font-family: 'Space Mono', monospace; font-size: 2rem; color: #fff; margin-bottom: 0; }
+        .new-analysis-btn {
+            background-color: var(--primary-color); color: #fff; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; font-weight: 700;
+            cursor: pointer; transition: background-color 0.3s ease;
+        }
+        .new-analysis-btn:hover { background-color: #0077b3; }
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background-color: var(--background-light); padding: 1.5rem;
+            border-radius: 8px; border: 1px solid var(--border-color);
+        }
+        .stat-card .value { font-family: 'Space Mono', monospace; font-size: 2.5rem; color: #fff; display: block; }
+        .stat-card .label { font-size: 0.9rem; }
+        .results-body {
+            display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: flex-start;
+        }
+        .chart-container {
+            background-color: var(--background-light); padding: 1.5rem;
+            border-radius: 8px; border: 1px solid var(--border-color); text-align: center;
+        }
+        .chart-container h3 { color: #fff; margin-bottom: 1.5rem; }
+        .donut-chart { transform: rotate(-90deg); }
+        .donut-chart circle { fill: none; }
+        .donut-chart .donut-segment { animation: fill-donut 2s ease-out forwards; }
+        @keyframes fill-donut { to { stroke-dashoffset: 0; } }
+        .table-container { width: 100%; overflow-x: auto; }
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th, .results-table td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .results-table th { font-family: 'Space Mono', monospace; color: #fff; }
+        .results-table td { font-size: 0.9rem; }
+        .results-table .monospace { font-family: 'Space Mono', monospace; }
+        .tag { padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
+        .tag.weak { background-color: rgba(218, 54, 51, 0.2); color: var(--danger-color); }
+
+        @media (max-width: 800px) {
+            .results-body { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-background"></div>
+    <header>
+        <a href="index.html" class="logo">Krypto<span>spect</span></a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="demo.html">Live Demo</a>
+        </nav>
+    </header>
+    <main>
+        <div class="card-container" id="upload-container">
+            <h1>Analyze Firmware</h1>
+            <p>Upload a binary file (.bin, .hex, .elf) to begin the analysis.</p>
+            <div class="drag-area">
+                <div class="icon">⬆️</div>
+                <h2>Drag & Drop File Here</h2>
+                <span>or</span>
+            </div>
+            <div class="separator">OR</div>
+            <button class="file-upload-btn">Choose a File</button>
+            <input type="file" id="file-input" hidden>
+            <div class="examples-container">
+                <h3>Or try an example:</h3>
+                <button class="example-btn">Sample Router Firmware (.bin)</button>
+                <button class="example-btn">IoT Device Firmware (.hex)</button>
+                <button class="example-btn">Embedded System ELF</button>
+            </div>
+        </div>
+
+        <div class="card-container" id="analysis-container" hidden>
+            <h1>Analyzing Firmware</h1>
+            <p id="analysis-filename">Processing: file_name.bin</p>
+            <div class="loader"></div>
+            <ul class="status-updates">
+                <li class="pending"><span>[ ]</span>Upload complete.</li>
+                <li class="pending"><span>[ ]</span>Disassembling binary...</li>
+                <li class="pending"><span>[ ]</span>Extracting function features...</li>
+                <li class="pending"><span>[ ]</span>Running AI model...</li>
+                <li class="pending"><span>[ ]</span>Compiling results...</li>
+            </ul>
+        </div>
+
+        <div class="card-container" id="results-container" hidden>
+            <div class="results-header">
+                <div>
+                    <h1>Analysis Results</h1>
+                    <p id="results-filename">router_firmware.bin</p>
+                </div>
+                <button class="new-analysis-btn">Start New Analysis</button>
+            </div>
+            <div class="summary-grid">
+                <div class="stat-card">
+                    <span class="value">74</span>
+                    <span class="label">Crypto Functions Found</span>
+                </div>
+                <div class="stat-card">
+                    <span class="value">68</span>
+                    <span class="label">High Confidence Detections</span>
+                </div>
+                <div class="stat-card">
+                    <span class="value">3</span>
+                    <span class="label">Potential Vulnerabilities</span>
+                </div>
+            </div>
+            <div class="results-body">
+                <div class="chart-container">
+                    <h3>Algorithm Distribution</h3>
+                    <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-chart">
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#30363d" stroke-width="4"></circle>
+                        <circle cx="21" cy="21" r="15.915" stroke="#00aaff" stroke-width="4" stroke-dasharray="40 60" stroke-dashoffset="100" class="donut-segment"></circle>
+                        <circle cx="21" cy="21" r="15.915" stroke="#1f78b4" stroke-width="4" stroke-dasharray="25 75" stroke-dashoffset="60" class="donut-segment" style="animation-delay: 0.2s"></circle>
+                        <circle cx="21" cy="21" r="15.915" stroke="#a6cee3" stroke-width="4" stroke-dasharray="15 85" stroke-dashoffset="35" class="donut-segment" style="animation-delay: 0.4s"></circle>
+                        <circle cx="21" cy="21" r="15.915" stroke="#fb9a99" stroke-width="4" stroke-dasharray="20 80" stroke-dashoffset="20" class="donut-segment" style="animation-delay: 0.6s"></circle>
+                    </svg>
+                </div>
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead><tr><th>Location</th><th>Detected Primitive</th><th>Confidence</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            <tr><td class="monospace">0x00418A3C</td><td>AES-256-CBC</td><td>98.5%</td><td></td></tr>
+                            <tr><td class="monospace">0x00421B90</td><td>SHA-256</td><td>99.2%</td><td></td></tr>
+                            <tr><td class="monospace">0x00583E10</td><td>MD5</td><td>99.9%</td><td><span class="tag weak">Weak Algorithm</span></td></tr>
+                            <tr><td class="monospace">0x0059A244</td><td>RSA-2048</td><td>94.1%</td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+    // This wrapper ensures the script runs only after the whole page is loaded.
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- Element Selectors ---
+        const uploadContainer = document.getElementById('upload-container');
+        const analysisContainer = document.getElementById('analysis-container');
+        const resultsContainer = document.getElementById('results-container');
+        const dragArea = document.querySelector('.drag-area');
+        const fileInput = document.querySelector('#file-input');
+        const fileUploadBtn = document.querySelector('.file-upload-btn');
+        const newAnalysisBtn = document.querySelector('.new-analysis-btn');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+
+        let currentFile = null;
+
+        // --- Core Functions ---
+
+        /**
+         * NEW: This function now sends the file to the backend server.
+         * The 'async' keyword allows us to use 'await' for the network request.
+         */
+        async function handleFile(file) {
+            currentFile = file;
+            
+            // 1. Transition to the "Analysis" screen to show progress
+            uploadContainer.hidden = true;
+            resultsContainer.hidden = true;
+            analysisContainer.hidden = false;
+            document.getElementById('analysis-filename').textContent = `Uploading & Processing: ${currentFile.name}`;
+            
+            // 2. Prepare the file for sending
+            const formData = new FormData();
+            formData.append('firmwareFile', file);
+            
+            try {
+                // 3. Send the file to the Python backend using fetch()
+                // The URL must match the one your Flask server is running on.
+                const response = await fetch('http://127.0.0.1:5000/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed on the server.');
+                }
+                
+                // 4. Get the JSON results from the server
+                const results = await response.json();
+                
+                // 5. Hide the analysis screen
+                analysisContainer.hidden = true;
+                
+                // 6. Populate the dashboard with the REAL data from the server
+                populateResultsDashboard(results);
+                resultsContainer.hidden = false;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`An error occurred: ${error.message}`);
+                resetDemo(); // Go back to the upload screen on error
+            }
+        }
+
+        /**
+         * NEW: This function takes the server's JSON data and updates the dashboard.
+         */
+        function populateResultsDashboard(results) {
+            // Update summary cards
+            document.querySelector('#results-container .stat-card:nth-child(1) .value').textContent = results.functionsFound;
+            document.querySelector('#results-container .stat-card:nth-child(2) .value').textContent = results.highConfidence;
+            document.querySelector('#results-container .stat-card:nth-child(3) .value').textContent = results.vulnerabilities;
+            document.getElementById('results-filename').textContent = results.fileName;
+
+            // Update the results table
+            const tableBody = document.querySelector('.results-table tbody');
+            tableBody.innerHTML = ''; // Clear any old results
+
+            results.findings.forEach(finding => {
+                const row = document.createElement('tr');
+                
+                const notesHtml = finding.notes ? `<span class="tag weak">${finding.notes}</span>` : '';
+
+                row.innerHTML = `
+                    <td class="monospace">${finding.location}</td>
+                    <td>${finding.primitive}</td>
+                    <td>${finding.confidence}%</td>
+                    <td>${notesHtml}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        /**
+         * This function resets the view to the initial upload screen.
+         */
+        function resetDemo() {
+            resultsContainer.hidden = true;
+            analysisContainer.hidden = true;
+            uploadContainer.hidden = false;
+            currentFile = null;
+            fileInput.value = ""; // Clear file input to allow re-uploading the same file
+        }
+
+        // --- Event Listeners ---
+        newAnalysisBtn.addEventListener('click', resetDemo);
+        fileUploadBtn.addEventListener('click', () => fileInput.click());
+        dragArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (event) => {
+            if (event.target.files[0]) {
+                handleFile(event.target.files[0]);
+            }
+        });
+
+        // Make example buttons work with the new backend logic
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mockFileName = btn.textContent;
+                // Create a mock/dummy file object to send to the handler
+                const mockFile = new File(["dummy content"], mockFileName, { type: "text/plain" });
+                handleFile(mockFile);
+});
+        });
+
+        // Drag and Drop Listeners
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => dragArea.classList.add('active'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => dragArea.classList.remove('active'), false);
+        });
+        dragArea.addEventListener('drop', (e) => {
+            if (e.dataTransfer.files[0]) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        }, false);
+    });
+</script>
+</body>
+</html>
