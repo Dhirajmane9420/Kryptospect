@@ -287,21 +287,18 @@
             // --- Core Functions ---
             
             async function handleFileUpload(file) {
-                // This function handles MANUAL file uploads
+                // This function handles MANUAL file uploads.
                 console.log("Handling manual file upload:", file.name);
 
-                // 1. Transition to the "Analysis" screen
                 uploadContainer.hidden = true;
                 resultsContainer.hidden = true;
                 analysisContainer.hidden = false;
                 document.getElementById('analysis-filename').textContent = `Analyzing Uploaded File: ${file.name}`;
                 
-                // 2. Prepare file for sending
                 const formData = new FormData();
                 formData.append('firmwareFile', file);
                 
                 try {
-                    // 3. Send to the standard /analyze endpoint
                     const response = await fetch('http://127.0.0.1:5000/analyze', {
                         method: 'POST',
                         body: formData
@@ -314,7 +311,6 @@
                     
                     const results = await response.json();
                     
-                    // 4. Populate and show the dashboard
                     analysisContainer.hidden = true;
                     populateResultsDashboard(results);
                     resultsContainer.hidden = false;
@@ -327,17 +323,15 @@
             }
             
             async function analyzeLocalFile(filename) {
-                // This function handles SCRAPED files passed in the URL
+                // This function handles SCRAPED files passed in the URL.
                 console.log("Analyzing local file from server:", filename);
                 
-                // 1. Transition to the "Analysis" screen
                 uploadContainer.hidden = true;
                 resultsContainer.hidden = true;
                 analysisContainer.hidden = false;
                 document.getElementById('analysis-filename').textContent = `Analyzing Scraped File: ${filename}`;
                 
                 try {
-                    // 2. Send request to the NEW /analyze-local endpoint
                     const response = await fetch('http://127.0.0.1:5000/analyze-local', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -351,7 +345,6 @@
                     
                     const results = await response.json();
                     
-                    // 3. Populate and show the dashboard
                     analysisContainer.hidden = true;
                     populateResultsDashboard(results);
                     resultsContainer.hidden = false;
@@ -405,12 +398,11 @@
 
             exampleBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const mockFile = new File(["example content"], btn.textContent, { type: "text/plain" });
+                    const mockFile = new File(["This is a test file with AES and RSA."], btn.textContent, { type: "text/plain" });
                     handleFileUpload(mockFile);
                 });
             });
 
-            // Drag and Drop Listeners
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dragArea.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
             });
@@ -424,16 +416,13 @@
                 if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
             }, false);
 
-
             // --- Check for URL parameter on page load ---
             const urlParams = new URLSearchParams(window.location.search);
             const fileNameFromUrl = urlParams.get('file');
 
             if (fileNameFromUrl) {
-                // If a filename is in the URL, start analysis automatically
                 analyzeLocalFile(fileNameFromUrl);
             } else {
-                // Otherwise, show the normal upload page
                 console.log("No file parameter found. Awaiting manual upload.");
             }
         });
