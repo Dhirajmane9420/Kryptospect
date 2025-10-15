@@ -272,148 +272,171 @@
             </div>
         </div>
     </main>
-    <script>
-    // This wrapper ensures the script runs only after the whole page is loaded.
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // --- Element Selectors ---
-        const uploadContainer = document.getElementById('upload-container');
-        const analysisContainer = document.getElementById('analysis-container');
-        const resultsContainer = document.getElementById('results-container');
-        const dragArea = document.querySelector('.drag-area');
-        const fileInput = document.querySelector('#file-input');
-        const fileUploadBtn = document.querySelector('.file-upload-btn');
-        const newAnalysisBtn = document.querySelector('.new-analysis-btn');
-        const exampleBtns = document.querySelectorAll('.example-btn');
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Element Selectors ---
+            const uploadContainer = document.getElementById('upload-container');
+            const analysisContainer = document.getElementById('analysis-container');
+            const resultsContainer = document.getElementById('results-container');
+            const dragArea = document.querySelector('.drag-area');
+            const fileInput = document.querySelector('#file-input');
+            const fileUploadBtn = document.querySelector('.file-upload-btn');
+            const newAnalysisBtn = document.querySelector('.new-analysis-btn');
+            const exampleBtns = document.querySelectorAll('.example-btn');
 
-        let currentFile = null;
+            // --- Core Functions ---
+            
+            async function handleFileUpload(file) {
+                // This function handles MANUAL file uploads
+                console.log("Handling manual file upload:", file.name);
 
-        // --- Core Functions ---
-
-        /**
-         * NEW: This function now sends the file to the backend server.
-         * The 'async' keyword allows us to use 'await' for the network request.
-         */
-        async function handleFile(file) {
-            currentFile = file;
-            
-            // 1. Transition to the "Analysis" screen to show progress
-            uploadContainer.hidden = true;
-            resultsContainer.hidden = true;
-            analysisContainer.hidden = false;
-            document.getElementById('analysis-filename').textContent = `Uploading & Processing: ${currentFile.name}`;
-            
-            // 2. Prepare the file for sending
-            const formData = new FormData();
-            formData.append('firmwareFile', file);
-            
-            try {
-                // 3. Send the file to the Python backend using fetch()
-                // The URL must match the one your Flask server is running on.
-                const response = await fetch('http://127.0.0.1:5000/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
+                // 1. Transition to the "Analysis" screen
+                uploadContainer.hidden = true;
+                resultsContainer.hidden = true;
+                analysisContainer.hidden = false;
+                document.getElementById('analysis-filename').textContent = `Analyzing Uploaded File: ${file.name}`;
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Analysis failed on the server.');
+                // 2. Prepare file for sending
+                const formData = new FormData();
+                formData.append('firmwareFile', file);
+                
+                try {
+                    // 3. Send to the standard /analyze endpoint
+                    const response = await fetch('http://127.0.0.1:5000/analyze', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Analysis failed on the server.');
+                    }
+                    
+                    const results = await response.json();
+                    
+                    // 4. Populate and show the dashboard
+                    analysisContainer.hidden = true;
+                    populateResultsDashboard(results);
+                    resultsContainer.hidden = false;
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert(`An error occurred: ${error.message}`);
+                    resetDemo();
                 }
-                
-                // 4. Get the JSON results from the server
-                const results = await response.json();
-                
-                // 5. Hide the analysis screen
-                analysisContainer.hidden = true;
-                
-                // 6. Populate the dashboard with the REAL data from the server
-                populateResultsDashboard(results);
-                resultsContainer.hidden = false;
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert(`An error occurred: ${error.message}`);
-                resetDemo(); // Go back to the upload screen on error
             }
-        }
-
-        /**
-         * NEW: This function takes the server's JSON data and updates the dashboard.
-         */
-        function populateResultsDashboard(results) {
-            // Update summary cards
-            document.querySelector('#results-container .stat-card:nth-child(1) .value').textContent = results.functionsFound;
-            document.querySelector('#results-container .stat-card:nth-child(2) .value').textContent = results.highConfidence;
-            document.querySelector('#results-container .stat-card:nth-child(3) .value').textContent = results.vulnerabilities;
-            document.getElementById('results-filename').textContent = results.fileName;
-
-            // Update the results table
-            const tableBody = document.querySelector('.results-table tbody');
-            tableBody.innerHTML = ''; // Clear any old results
-
-            results.findings.forEach(finding => {
-                const row = document.createElement('tr');
+            
+            async function analyzeLocalFile(filename) {
+                // This function handles SCRAPED files passed in the URL
+                console.log("Analyzing local file from server:", filename);
                 
-                const notesHtml = finding.notes ? `<span class="tag weak">${finding.notes}</span>` : '';
+                // 1. Transition to the "Analysis" screen
+                uploadContainer.hidden = true;
+                resultsContainer.hidden = true;
+                analysisContainer.hidden = false;
+                document.getElementById('analysis-filename').textContent = `Analyzing Scraped File: ${filename}`;
+                
+                try {
+                    // 2. Send request to the NEW /analyze-local endpoint
+                    const response = await fetch('http://127.0.0.1:5000/analyze-local', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: filename })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Analysis failed on the server.');
+                    }
+                    
+                    const results = await response.json();
+                    
+                    // 3. Populate and show the dashboard
+                    analysisContainer.hidden = true;
+                    populateResultsDashboard(results);
+                    resultsContainer.hidden = false;
 
-                row.innerHTML = `
-                    <td class="monospace">${finding.location}</td>
-                    <td>${finding.primitive}</td>
-                    <td>${finding.confidence}%</td>
-                    <td>${notesHtml}</td>
-                `;
-                tableBody.appendChild(row);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert(`An error occurred: ${error.message}`);
+                    resetDemo();
+                }
+            }
+
+            function populateResultsDashboard(results) {
+                // Update summary cards
+                resultsContainer.querySelector('.stat-card:nth-child(1) .value').textContent = results.functionsFound;
+                resultsContainer.querySelector('.stat-card:nth-child(2) .value').textContent = results.highConfidence;
+                resultsContainer.querySelector('.stat-card:nth-child(3) .value').textContent = results.vulnerabilities;
+                document.getElementById('results-filename').textContent = results.fileName;
+
+                // Update the results table
+                const tableBody = resultsContainer.querySelector('.results-table tbody');
+                tableBody.innerHTML = ''; // Clear old results
+
+                if (results.findings && results.findings.length > 0) {
+                    results.findings.forEach(finding => {
+                        const row = document.createElement('tr');
+                        const notesHtml = finding.notes ? `<span class="tag weak">${finding.notes}</span>` : '';
+                        row.innerHTML = `
+                            <td class="monospace">${finding.location}</td>
+                            <td>${finding.primitive}</td>
+                            <td>${finding.confidence}%</td>
+                            <td>${notesHtml}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            }
+
+            function resetDemo() {
+                // Go back to homepage after reset
+                window.location.href = 'index.html';
+            }
+
+            // --- Event Listeners and Initializer ---
+            newAnalysisBtn.addEventListener('click', resetDemo);
+            fileUploadBtn.addEventListener('click', () => fileInput.click());
+            dragArea.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', (event) => {
+                if (event.target.files[0]) handleFileUpload(event.target.files[0]);
             });
-        }
-        
-        /**
-         * This function resets the view to the initial upload screen.
-         */
-        function resetDemo() {
-            resultsContainer.hidden = true;
-            analysisContainer.hidden = true;
-            uploadContainer.hidden = false;
-            currentFile = null;
-            fileInput.value = ""; // Clear file input to allow re-uploading the same file
-        }
 
-        // --- Event Listeners ---
-        newAnalysisBtn.addEventListener('click', resetDemo);
-        fileUploadBtn.addEventListener('click', () => fileInput.click());
-        dragArea.addEventListener('click', () => fileInput.click());
-        
-        fileInput.addEventListener('change', (event) => {
-            if (event.target.files[0]) {
-                handleFile(event.target.files[0]);
+            exampleBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mockFile = new File(["example content"], btn.textContent, { type: "text/plain" });
+                    handleFileUpload(mockFile);
+                });
+            });
+
+            // Drag and Drop Listeners
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dragArea.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+            });
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dragArea.addEventListener(eventName, () => dragArea.classList.add('active'), false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dragArea.addEventListener(eventName, () => dragArea.classList.remove('active'), false);
+            });
+            dragArea.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
+            }, false);
+
+
+            // --- Check for URL parameter on page load ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileNameFromUrl = urlParams.get('file');
+
+            if (fileNameFromUrl) {
+                // If a filename is in the URL, start analysis automatically
+                analyzeLocalFile(fileNameFromUrl);
+            } else {
+                // Otherwise, show the normal upload page
+                console.log("No file parameter found. Awaiting manual upload.");
             }
         });
-
-        // Make example buttons work with the new backend logic
-        exampleBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const mockFileName = btn.textContent;
-                // Create a mock/dummy file object to send to the handler
-                const mockFile = new File(["dummy content"], mockFileName, { type: "text/plain" });
-                handleFile(mockFile);
-});
-        });
-
-        // Drag and Drop Listeners
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dragArea.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
-        });
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dragArea.addEventListener(eventName, () => dragArea.classList.add('active'), false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            dragArea.addEventListener(eventName, () => dragArea.classList.remove('active'), false);
-        });
-        dragArea.addEventListener('drop', (e) => {
-            if (e.dataTransfer.files[0]) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        }, false);
-    });
-</script>
+    </script>
 </body>
 </html>

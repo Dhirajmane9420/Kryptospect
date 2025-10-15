@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Scrapper - Kryptospect</title>
+    <style>
+        /* --- Global Styles & Resets --- */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #00aaff;
+            --background-color: #0d1117;
+            --background-light: #161b22;
+            --text-color: #c9d1d9;
+            --header-bg: rgba(13, 17, 23, 0.8);
+            --border-color: #30363d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* --- Animated Background --- */
+        .animated-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1;
+            background: linear-gradient(240deg, #1a0c2e, #0d1117, #112d40);
+            background-size: 400% 400%; animation: gradientAnimation 15s ease infinite;
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+        }
+
+        /* --- Header / Navigation Bar --- */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; padding: 1rem 5%;
+            display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        header.scrolled {
+            background-color: var(--header-bg); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .logo {
+            font-family: 'Space Mono', monospace; font-size: 1.5rem; color: #fff;
+            font-weight: 700; text-decoration: none;
+        }
+        .logo span { color: var(--primary-color); }
+        nav a {
+            font-size: 1rem; color: var(--text-color); text-decoration: none;
+            margin-left: 2rem; position: relative; transition: color 0.3s ease;
+        }
+        nav a:hover { color: var(--primary-color); }
+
+        /* --- Auth Buttons in Navbar --- */
+        .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: 2rem;
+        }
+        .nav-button {
+            padding: 0.5rem 1rem; border-radius: 5px;
+            text-decoration: none; font-weight: 700;
+            transition: all 0.3s ease; font-size: 0.9rem;
+            border: 2px solid var(--primary-color);
+            white-space: nowrap;
+        }
+        .login-btn { background-color: transparent; color: var(--primary-color); }
+        .login-btn:hover { background-color: var(--primary-color); color: #fff; }
+        .signup-btn { background-color: var(--primary-color); color: #fff; }
+        .signup-btn:hover { background-color: #0077b3; border-color: #0077b3; }
+
+        /* --- Auth/DataScraper Page Styles --- */
+        .auth-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 8rem 2rem 2rem 2rem;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 700px; /* Wider card for the scrapper */
+            background: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .auth-card h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        .auth-card p {
+            color: var(--text-color);
+            margin-bottom: 2rem;
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .input-group { text-align: left; }
+        .input-group label {
+            display: block; font-size: 0.9rem;
+            margin-bottom: 0.5rem; color: var(--text-color);
+        }
+        .input-group input {
+            width: 100%; padding: 0.75rem;
+            border-radius: 6px; border: 1px solid var(--border-color);
+            background-color: var(--background-color); color: #fff;
+            font-size: 1rem;
+        }
+        .input-group input:focus {
+            outline: none; border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.2);
+        }
+        .submit-btn {
+            width: 100%; padding: 0.75rem;
+            border-radius: 6px; border: none;
+            background-color: var(--primary-color); color: #fff;
+            font-weight: 700; font-size: 1rem;
+            cursor: pointer; transition: background-color 0.2s ease;
+        }
+        .submit-btn:hover { background-color: #0077b3; }
+
+        /* --- Data Scrapper Specific Styles --- */
+        #scrape-form { width: 100%; }
+        .example-links { font-size: 0.9rem; color: var(--text-color); }
+        .example-links a { color: var(--primary-color); text-decoration: none; margin: 0 0.5rem; }
+        .example-links a:hover { text-decoration: underline; }
+        #scrape-btn:disabled { background-color: #555; cursor: not-allowed; }
+        .loader {
+            width: 30px; height: 30px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%; margin: 1rem auto 0 auto;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .results-log-container { margin-top: 2rem; text-align: left; width: 100%; }
+        .results-log-container h3 {
+            font-family: 'Space Mono', monospace;
+            color: #fff; margin-bottom: 0.5rem;
+        }
+        #log-output {
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 1rem;
+            font-family: 'Space Mono', monospace; font-size: 0.8rem;
+            white-space: pre-wrap; word-wrap: break-word;
+            max-height: 200px; overflow-y: auto;
+        }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-info { color: var(--text-color); }
+
+    </style>
+</head>
+<body>
+    <div class="animated-background"></div>
+
+    <header class="scrolled">
+        <a href="index.html" class="logo">Krypto<span>spect</span></a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="demo.html">Live Demo</a>
+            <a href="datascraper.html">Data Scrapper</a>
+        </nav>
+        <div class="auth-buttons">
+            <a href="login.html" class="nav-button login-btn">Login</a>
+            <a href="signup.html" class="nav-button signup-btn">Signup</a>
+        </div>
+    </header>
+
+    <main class="auth-page">
+        <div class="auth-card">
+            <h1>Firmware Data Scrapper</h1>
+            <p>Enter a product support URL to find and download firmware.</p>
+
+            <div class="auth-form">
+                <form id="scrape-form">
+                    <div class="input-group">
+                        <label for="url-input">Website URL</label>
+                        <input type="url" id="url-input" placeholder="e.g., https://www.tp-link.com/us/support/download/..." required>
+                    </div>
+                    <button type="submit" id="scrape-btn" class="submit-btn">Start Scraping</button>
+                </form>
+                
+                <div id="loader" class="loader" hidden></div>
+
+                <div class="example-links">
+                    <p>Try an example:</p>
+                    <a href="#" data-url="https://www.tp-link.com/us/support/download/archer-c7/">TP-Link Archer C7</a>
+                    <a href="#" data-url="https://www.netgear.com/support/product/r7000#download">Netgear R7000</a>
+                </div>
+            </div>
+
+            <div id="results-log" class="results-log-container" hidden>
+                <h3>Scraping Log</h3>
+                <pre id="log-output"></pre>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const scrapeForm = document.getElementById('scrape-form');
+        const urlInput = document.getElementById('url-input');
+        const scrapeBtn = document.getElementById('scrape-btn');
+        const loader = document.getElementById('loader');
+        const resultsLogContainer = document.getElementById('results-log');
+        const logOutput = document.getElementById('log-output');
+        const exampleLinks = document.querySelectorAll('.example-links a');
+
+        scrapeForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const url = urlInput.value;
+            
+            scrapeBtn.disabled = true;
+            scrapeBtn.textContent = 'Scraping...';
+            loader.hidden = false;
+            resultsLogContainer.hidden = false;
+            logOutput.innerHTML = '';
+            addToLog('info', `[+] Starting scraper for ${url}...`);
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === 'success') {
+                    addToLog('success', `[SUCCESS] ${result.message}`);
+                    addToLog('info', '[+] Redirecting to analysis page...');
+                    
+                    // --- NEW: Redirect to demo page on success ---
+                    const fileName = result.fileName;
+                    setTimeout(() => {
+                        window.location.href = `demo.html?file=${encodeURIComponent(fileName)}`;
+                    }, 2000); // Wait 2 seconds before redirecting
+
+                } else {
+                    throw new Error(result.message || 'An unknown error occurred.');
+                }
+
+            } catch (error) {
+                addToLog('error', `[ERROR] ${error.message}`);
+                // Reset button state on error
+                scrapeBtn.disabled = false;
+                scrapeBtn.textContent = 'Start Scraping';
+                loader.hidden = true;
+            }
+        });
+
+        function addToLog(type, message) {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-${type}`;
+            logEntry.textContent = message;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        exampleLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                urlInput.value = this.getAttribute('data-url');
+            });
+        });
+    });
+</script>
+</body>
+</html>

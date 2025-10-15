@@ -1,20 +1,30 @@
-# Use a lightweight Ubuntu Linux as our base system
+# 1. Start with the official, reliable Ubuntu 20.04 base image.
 FROM ubuntu:20.04
 
-# Avoid getting stuck on interactive prompts during installation
+# 2. Avoid interactive prompts during installation.
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Update the system's package list and install the ARM 32-bit cross-compiler
-# The '-y' flag automatically answers 'yes' to any prompts
-RUN apt-get update && apt-get install -y \
-    gcc-arm-linux-gnueabi \
-    build-essential
+# 3. Add the 32-bit ARM (hard-float) architecture.
+RUN dpkg --add-architecture armhf
 
-# Set the working directory inside the container to /app
+# 4. Create a separate, correct sources list for the new armhf architecture,
+#    pointing to the official ports archive.
+RUN echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal main restricted universe multiverse" > /etc/apt/sources.list.d/armhf.list && \
+    echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main restricted universe multiverse" >> /etc/apt/sources.list.d/armhf.list && \
+    echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal-backports main restricted universe multiverse" >> /etc/apt/sources.list.d/armhf.list && \
+    echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list.d/armhf.list
+
+# 5. Update the package lists from all sources.
+RUN apt-get update
+
+# 6. Install the correct HARD-FLOAT cross-compiler and the ARM version of the OpenSSL library.
+RUN apt-get install -y \
+    gcc-arm-linux-gnueabihf \
+    build-essential \
+    libssl-dev:armhf
+
+# 7. Set the working directory.
 WORKDIR /app
 
-# Copy our C code examples (all files ending in .c) from our project folder
-# into the container's /app folder.
+# 8. Copy our C code into the container.
 COPY ./*.c ./
-
-# This image is now a ready-to-use environment for ARM 32-bit compilation.
